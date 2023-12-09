@@ -1,7 +1,10 @@
+import base64
+
 import uvicorn as uvicorn
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
-from encrypt import encrypt, decrypt
+from encryption import encrypt, decrypt
 
 app = FastAPI()
 
@@ -13,12 +16,16 @@ class RequestBody(BaseModel):
 
 @app.post("/encrypt")
 async def root(body: RequestBody):
-    return {"value": encrypt(body.key, body.text)}
+    value = encrypt(body.key, body.text)
+    json_data = jsonable_encoder(value, custom_encoder={
+        bytes: lambda v: base64.b64encode(v).decode('utf-8')})
+    return {"value": json_data}
 
 
 @app.post("/decrypt")
 async def root(body: RequestBody):
-    return {"value": decrypt(body.key, body.text)}
+    value = base64.b64decode(body.text)
+    return {"value": decrypt(body.key, value)}
 
 
 if __name__ == "__main__":

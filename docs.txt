@@ -1,0 +1,45 @@
+
+https://www.youtube.com/watch?v=O4xNJsjtN6E
+
+AES - 128 bit (16 bytes) simetrycal bit cypher
+
+AES Keys:
+ - 128 (10 rounds of encryption)
+ - 192 (12 rounds of encryption)
+ - 256 (14 rounds of encryption)
+
+Arranges bytes in 4x4 grid
+
+Given input:
+	b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15
+
+Arranges them like this:
+
+	b00 b04 b08 b12
+	b01 b05 b09 b13
+	b02 b06 b10 b14
+	b03 b07 b11 b15
+
+AES operations in one round:
+ - Plaintext XOR part of the key
+ - Substitute Bytes
+ - Shift Rows
+ - Mix Columns (except the last round)
+ - Add round key (XOR)
+
+Keys are expanded for every round of encryption
+
+Substitute Bytes (S-BOX)
+ - We go over each byte in our message and substitute it by a byte from the lookup table
+
+Shift Rows:
+ - We shift each row to the left except the first row
+  - second row shift by one position
+  - third row shift by two position
+  - fourth row shift by three position
+ - Together with the substitution this makes the data very messy and not recognizable
+
+Mix Columns
+ - Done using matrix multiplication
+ - Take the columns and multiply them as a vector by a matrix
+ - Produces a new column (which is a combination of all the columns) to replace the original one
