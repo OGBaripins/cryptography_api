@@ -81,7 +81,8 @@ def inv_shift_rows(s):
     s[0][3], s[1][3], s[2][3], s[3][3] = s[1][3], s[2][3], s[3][3], s[0][3]
 
 
-# learned from https://web.archive.org/web/20100626212235/http://cs.ucsb.edu/~koc/cs178/projects/JT/aes.c
+# The lambda function calculates the "xtime" operation on an input byte a in the finite field GF(2^8) (Galois Field),
+# and the result is an 8-bit value. This operation is a fundamental step in the AES encryption algorithm.
 xtime = lambda a: (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
 
 
@@ -121,6 +122,7 @@ def add_round_key(s, k):
             s[i][j] ^= k[i][j]
 
 
+# Used to create unique round keys or every round
 r_con = (
     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
     0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D, 0x9A,
@@ -142,18 +144,6 @@ def matrix2bytes(matrix):
 def xor_bytes(a, b):
     """ Returns a new byte array with the elements xor'ed. """
     return bytes(i ^ j for i, j in zip(a, b))
-
-
-def inc_bytes(a):
-    """ Returns a new byte array with the value increment by 1 """
-    out = list(a)
-    for i in reversed(range(len(out))):
-        if out[i] == 0xFF:
-            out[i] = 0
-        else:
-            out[i] += 1
-            break
-    return bytes(out)
 
 
 def pad(plaintext):
@@ -185,12 +175,7 @@ def split_blocks(message, block_size=16, require_padding=True):
 
 
 class AES:
-    """
-    Class for AES-128 encryption with CBC mode and PKCS#7.
 
-    This is a raw implementation of AES, without key stretching or IV
-    management. Unless you need that, please use `encrypt` and `decrypt`.
-    """
     rounds_by_key_size = {16: 10, 24: 12, 32: 14}
 
     def __init__(self, master_key):
@@ -201,17 +186,18 @@ class AES:
         self.n_rounds = AES.rounds_by_key_size[len(master_key)]
         self._key_matrices = self._expand_key(master_key)
 
+    # Key expansion ensures that each round of the AES algorithm uses a unique round key, derived from
+    # the original key. This process adds complexity and security to the algorithm by introducing variability and
+    # preventing attacks that might exploit patterns in the key schedule.
     def _expand_key(self, master_key):
-        """
-        Expands and returns a list of key matrices for the given master_key.
-        """
-        # Initialize round keys with raw key material.
+
+        # Expands and returns a list of key matrices for the given key.
         key_columns = bytes2matrix(master_key)
         iteration_size = len(master_key) // 4
 
         i = 1
         while len(key_columns) < (self.n_rounds + 1) * 4:
-            # Copy previous word.
+
             word = list(key_columns[-1])
 
             # Perform schedule_core once every "row".
@@ -342,10 +328,8 @@ def encrypt(key, plaintext, workload=100000):
     salt = os.urandom(SALT_SIZE)
     key, hmac_key, iv = get_key_iv(key, salt, workload)
     ciphertext = AES(key).encrypt_cbc(plaintext, iv)
-    hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
-    assert len(hmac) == HMAC_SIZE
 
-    return hmac + salt + ciphertext
+    return ciphertext
 
 
 def decrypt(key, ciphertext, workload=100000):
@@ -379,6 +363,5 @@ def decrypt(key, ciphertext, workload=100000):
 __all__ = ["encrypt", "decrypt", "AES"]
 
 if __name__ == '__main__':
-
     enc_message = encrypt('my secret key', 'mmmm yes this is my secure message')
     assert decrypt("my secret key", enc_message) == b'mmmm yes this is my secure message'
