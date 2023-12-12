@@ -175,7 +175,6 @@ def split_blocks(message, block_size=16, require_padding=True):
 
 
 class AES:
-
     rounds_by_key_size = {16: 10, 24: 12, 32: 14}
 
     def __init__(self, master_key):
@@ -329,23 +328,47 @@ def encrypt(key, plaintext, workload=100000):
     key, hmac_key, iv = get_key_iv(key, salt, workload)
     ciphertext = AES(key).encrypt_cbc(plaintext, iv)
 
+    hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
+    assert len(hmac) == HMAC_SIZE
+
+    return hmac + salt + ciphertext
+
+
+def encrypt_block_single(key, plaintext):
+    """
+    Encrypts a single block of 16 byte long plaintext.
+    """
+
+    if isinstance(key, str):
+        key = key.encode("utf-8")
+    if isinstance(plaintext, str):
+        plaintext = plaintext.encode("utf-8")
+
+    ciphertext = AES(key).encrypt_block(plaintext)
+
     return ciphertext
+
+
+def decrypt_block_single(key, ciphertext):
+    """
+    Decrypts a single block of 16 byte long plaintext.
+    """
+
+    if isinstance(key, str):
+        key = key.encode("utf-8")
+
+    return AES(key).decrypt_block(ciphertext)
 
 
 def decrypt(key, ciphertext, workload=100000):
     """
     Decrypts `ciphertext` with `key` using AES-128, an HMAC to verify integrity,
     and PBKDF2 to stretch the given key.
-
-    The exact algorithm is specified in the module docstring.
     """
 
     assert len(ciphertext) % 16 == 0, "Ciphertext must be made of full 16-byte blocks."
 
-    assert len(ciphertext) >= 32, """
-    Ciphertext must be at least 32 bytes long (16 byte salt + 16 byte block). To
-    encrypt or decrypt single blocks use `AES(key).decrypt_block(ciphertext)`.
-    """
+    assert len(ciphertext) >= 32
 
     if isinstance(key, str):
         key = key.encode("utf-8")
@@ -360,8 +383,11 @@ def decrypt(key, ciphertext, workload=100000):
     return AES(key).decrypt_cbc(ciphertext, iv)
 
 
-__all__ = ["encrypt", "decrypt", "AES"]
-
 if __name__ == '__main__':
+    # If assertions are correct the system should exit successfully with exit code 0
+
     enc_message = encrypt('my secret key', 'mmmm yes this is my secure message')
     assert decrypt("my secret key", enc_message) == b'mmmm yes this is my secure message'
+
+    enc_message_single = encrypt_block_single('bbbbbbbbbbbbbbbb', 'aaaaaaaaaaaaaaaa')
+    assert decrypt_block_single("bbbbbbbbbbbbbbbb", enc_message_single) == b"aaaaaaaaaaaaaaaa"
