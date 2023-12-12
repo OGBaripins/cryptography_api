@@ -390,4 +390,5 @@ if __name__ == '__main__':
     assert decrypt("my secret key", enc_message) == b'mmmm yes this is my secure message'
 
     enc_message_single = encrypt_block_single('bbbbbbbbbbbbbbbb', 'aaaaaaaaaaaaaaaa')
+    assert enc_message_single.hex() == '44971e715853a821c79e589bcd3ca9ce'
     assert decrypt_block_single("bbbbbbbbbbbbbbbb", enc_message_single) == b"aaaaaaaaaaaaaaaa"
